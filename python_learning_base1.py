@@ -21,6 +21,7 @@ height, width = image_size
 print(height)
 print(width)
 
+
 if image_size[0]<30:
     print("height of image size is less than 30")
 else:
@@ -30,6 +31,8 @@ def image_add(image_size):
     return image_size[0] + image_size[1]
 
 print(image_add(image_size))
+
+
 
 
 
