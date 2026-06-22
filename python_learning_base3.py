@@ -1,60 +1,48 @@
+import numpy as np
 import torch
-import torch.nn as nn
 
-class UWB_CRNN(nn.Module):
-    def __init__(self, cir_len = 640, num_bins = 200):
-        super().__init__()
-
-        self.cnn = nn.Sequential(
-            nn.Conv1d( 1, 16, 9, padding=4), nn.ReLU(), nn.MaxPool1d(2),
-            nn.Conv1d(16, 32, 5, padding=2), nn.ReLU(), nn.MaxPool1d(2)
-        )
-
-        self.projection = nn.Sequential(
-            nn.Linear(32*(cir_len//4), 128),
-            nn.ReLU(),
-            nn.Dropout(0.2)
-        )
-
-        self.lstm = nn.LSTM(128, 256, batch_first=True)
-        self.decoder = nn.Sequential(
-            nn.Linear(256, 128), nn.ReLU(),
-            nn.Linear(128, num_bins), nn.Sigmoid()
-        )
-
-
-    def forward(self, x):
-        batch, seq, cir = x.size()
-        x = x.view(batch*seq, 1, cir)
-
-        feat = self.cnn(x)
-        feat = feat.view(feat.size(0), -1)
-
-        feat = self.projection(feat)
-        lstm_in = feat.view(batch, seq, -1)
-
-        lstm_out, _ = self.lstm(lstm_in)
-        out  = self.decoder(lstm_out)
-
-        return out
-
-
-
-model = UWB_CRNN()
-
-x = torch.rand(20, 30, 640)
-y = model(x)
-
+x = np.array([[1, 2, 3, 4, 5.5],
+              [1, 2, 3, 4, 5.5]], dtype=float)
 print(x.shape)
+
+y = torch.tensor(x, dtype=torch.float32, requires_grad=True)
 print(y.shape)
 
+y_flat = y.reshape(-1, 1)
+print(f"{y_flat.shape} on {y_flat.device}")
 
 
+# 正常深度学习训练场景下，我们只需要叶子节点（模型可训练参数）的梯度，不需要给中间节点加 retain_grad()，
+# 它会额外占用显存。只有调试、需要查看中间层梯度时才会用到这个方法。
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+y_flat = y_flat.to(device)                      
+print(f"{y_flat.shape} on {y_flat.device}")
 
 
+z1 = y_flat[0, 0]**2 + 0.5*y_flat[1, 0]**2 + 0.1*y_flat[2, 0]**2
+z1.backward(retain_graph=True)
+print(y.grad)
+
+z2 = y_flat[0, 0]**2 + y_flat[1, 0]**2 + y_flat[2, 0]**2
+z2.backward()
+print(y.grad)
 
 
+# 如果Tensor在GPU上，需要先转回CPU；如果这个Tensor参与了梯度计算，还要先detach；
+x_back = y.detach().cpu().numpy()
+print(x_back.shape)
 
+
+# x = torch.tensor([1.0, 2.0, 3.4], requires_grad=True)
+# y1 = x[0]**2 + 0.5*x[1]**2 + 0.1*x[2]**2
+# y2 = x[0]**2 + x[1]**2 + x[2]**2
+
+# y1.backward(retain_graph=True)
+# print(x.grad)
+
+# # x.grad.zero_()
+# y2.backward()
+# print(x.grad)
 
 
 

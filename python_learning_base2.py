@@ -19,6 +19,9 @@ import torch
 # print(y.shape)
 
 
+
+
+
 x = np.array([
     [1, 2, 3, 4, 5, 6],
     [2, 3, 4, 5, 6, 7]
@@ -31,7 +34,6 @@ x = x.transpose()
 z = x@y
 print(z)
 print(z.std(axis=0))
-
 
 
 
